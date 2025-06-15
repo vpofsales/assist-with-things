@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useMemo } from 'react';
 
 interface Message {
@@ -57,6 +56,7 @@ export function useShoppingAssistant() {
   const [filterableAttributes, setFilterableAttributes] = useState<FilterableAttribute[]>([]);
   const [filters, setFilters] = useState<Filters>({ brand: 'all', sortBy: 'default', advanced: {} });
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, title: '', content: '', isLoading: false });
+  const [apiKey, setApiKey] = useState('');
 
   const callGemini = async (prompt: string, isJson = false): Promise<any> => {
     const payload: any = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
@@ -64,7 +64,10 @@ export function useShoppingAssistant() {
       payload.generationConfig = { responseMimeType: "application/json" };
     }
     
-    const apiKey = ""; // Note: API key should be in environment variable
+    if (!apiKey) {
+      throw new Error("API key is required. Please enter your Gemini API key.");
+    }
+    
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     
     try {
@@ -318,6 +321,7 @@ export function useShoppingAssistant() {
     generateComparison,
     updateFilters,
     updateComparisonList,
-    setModalState
+    setModalState,
+    setApiKey
   };
 }
