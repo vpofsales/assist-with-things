@@ -130,49 +130,22 @@ export function useShoppingAssistant() {
   const searchWebForProducts = async (searchQuery: string) => {
     // UPDATED PROMPT HERE
     const productGenPrompt = `
-      You are a product database API. Your ONLY job is to respond with a single, valid JSON object.
-      Based on the search query "${searchQuery}", generate a realistic list of 4 diverse and popular products.
-      For each product, include: name, brand, description, and price.
-      Crucially, generate a **plausible and realistic productUrl from a well-known e-commerce site** (e.g., amazon.com, bestbuy.com, walmart.com, target.com). The URL should look like an actual product page link.
-      Also, generate a **descriptive imageUrl using placehold.co**. For the image, use a relevant size (e.g., 400x400) and a color, with text that clearly indicates the product (e.g., "blue-lava-lamp" or "gaming-mouse"). Example: \`https://placehold.co/400x400/0000FF/FFFFFF?text=Blue+Lava+Lamp\`.
-      Include 2-3 relevant filterable attributes based on the product category.
-
-      Your response MUST be a single, valid JSON object.
-      The object must have "products" (an array of product objects) and "filterableAttributes" (an array of attribute objects) keys.
-      Each product MUST have:
-      - \`name\`: string
-      - \`brand\`: string
-      - \`description\`: string
-      - \`price\`: number (realistic, e.g., 29.99, 129.00)
-      - \`specs\`: array of {feature: string; explanation: string}
-      - \`imageUrl\`: string (use placehold.co with descriptive text and color)
-      - \`productUrl\`: string (a plausible, real-world e-commerce URL)
-
-      Example JSON structure (do NOT include this in the actual prompt, it's just for your understanding):
-      \`\`\`json
-      {
-        "products": [
-          {
-            "name": "Classic 14.5-inch Lava Lamp",
-            "brand": "Lava Lite",
-            "description": "The original soothing motion lamp, perfect for relaxation and ambiance.",
-            "price": 29.99,
-            "specs": [
-              { "feature": "Height", "explanation": "14.5 inches" },
-              { "feature": "Bulb Type", "explanation": "25-watt incandescent" }
-            ],
-            "imageUrl": "https://placehold.co/400x400/FF00FF/FFFFFF?text=Classic+Lava+Lamp",
-            "productUrl": "https://www.amazon.com/Lava-Lite-Classic-Lamp-Purple/dp/B001EO2P1Y"
-          }
-        ],
-        "filterableAttributes": [
-          { "name": "Price", "unit": "$" },
-          { "name": "Height", "unit": "inches" }
-        ]
-      }
-      \`\`\`
+      const productGenPrompt = `
+      The user is looking for products based on the query: "${searchQuery}".
+      Your task is to act as a query optimizer. Extract the most concise and effective product search term from this query, suitable for a direct e-commerce search API like Amazon or Walmart.
+      Focus on the core product and key attributes. Do NOT include phrases like "best deal", "under $X", "for my desk", or conversational filler.
+      Example 1: "small blue lava lamp under $50 for my desk" -> "small blue lava lamp"
+      Example 2: "gaming headset with noise cancellation and rgb" -> "gaming headset noise cancellation rgb"
+      Example 3: "cheap ergonomic office chair" -> "ergonomic office chair"
+      Respond with ONLY the optimized search term as plain text.
     `;
-    const result = await callGemini(productGenPrompt, true);
+    // The `isJson: false` here means we expect plain text from Gemini, which will then be passed to Oxylabs
+    const optimizedQuery = await callGemini(productGenPrompt, false);
+    console.log("Optimized query from Gemini for Oxylabs:", optimizedQuery);
+
+    // Now, call the Supabase function with the optimized query.
+    // The Supabase function (gemini-proxy) will handle the Oxylabs API call.
+    const result = await callGemini(optimizedQuery, true); // `isJson: true` because the Supabase function returns JSON
     return result;
   };
 
