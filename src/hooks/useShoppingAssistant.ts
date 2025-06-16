@@ -41,7 +41,6 @@ const INITIAL_MESSAGE: Message = {
   parts: [{ text: "Hello! I can find real products for you. To get started, you can tell me what you're looking for, or just say \"help me shop\" and I can guide you!" }]
 };
 
-
 export function useShoppingAssistant() {
   const [conversationHistory, setConversationHistory] = useState<Message[]>([INITIAL_MESSAGE]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -135,8 +134,17 @@ export function useShoppingAssistant() {
       The object must have "products" and "filterableAttributes" keys.
       - "products": An array of objects. Each MUST have: name, brand, description (strings), price (number), specs (array of {feature, explanation}), 
         "imageUrl" (a \`placehold.co\` URL), and "productUrl" (a plausible but fake e-commerce URL like \`https://www.examplestore.com/products/...\`).
+      - "filterableAttributes": An array of objects with "name" and optional "unit" properties.
     `;
     const result = await callGemini(productGenPrompt, true);
+    
+    // Handle case where filterableAttributes might be returned as strings instead of objects
+    if (result.filterableAttributes && Array.isArray(result.filterableAttributes)) {
+      result.filterableAttributes = result.filterableAttributes.map((attr: any) => 
+        typeof attr === 'string' ? { name: attr } : attr
+      );
+    }
+    
     return result;
   };
 
@@ -268,8 +276,10 @@ export function useShoppingAssistant() {
     
     Object.entries(filters.advanced).forEach(([attrName, minVal]) => {
       filtered = filtered.filter(p => {
-        const spec = p.specs.find(s => s.feature.toLowerCase().includes(attrName.toLowerCase()));
-        if (!spec) return false;
+        const spec = p.specs.find(s => 
+          s.feature && s.feature.toLowerCase().includes(attrName.toLowerCase())
+        );
+        if (!spec || !spec.feature) return false;
         const match = spec.feature.match(/(\d+(\.\d+)?)/);
         if (!match) return false;
         return parseFloat(match[0]) >= minVal;

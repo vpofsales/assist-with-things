@@ -45,8 +45,10 @@ const ProductFilters = ({
 
   const getAttributeRange = (attrName: string) => {
     const values = products.map(p => {
-      const spec = p.specs.find(s => s.feature.toLowerCase().includes(attrName.toLowerCase()));
-      if (!spec) return null;
+      const spec = p.specs.find(s => 
+        s.feature && s.feature.toLowerCase().includes(attrName.toLowerCase())
+      );
+      if (!spec || !spec.feature) return null;
       const match = spec.feature.match(/(\d+(\.\d+)?)/);
       return match ? parseFloat(match[0]) : null;
     }).filter(v => v !== null && !isNaN(v));
