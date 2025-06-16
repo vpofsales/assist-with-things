@@ -91,7 +91,6 @@ export function useShoppingAssistant() {
   };
 
   // No changes needed below this line, the logic remains the same.
-  // ... (keep the rest of the functions: determineNextAction, generateCategorySuggestions, etc.)
   const determineNextAction = async (userText: string, history: Message[]) => {
     const triagePrompt = `
       You are the brain of a proactive, intelligent AI Shopping Assistant. Your goal is to guide the user from a vague idea to a concrete product search in a friendly, human-like manner.
@@ -109,7 +108,7 @@ export function useShoppingAssistant() {
       6. If none of the above, is more detail truly needed? Action: \`clarify\`. Ask a single, precise, *next logical question* to get crucial missing information. Do NOT ask more than one question per turn.
       ---
       **Response Format:** Respond with ONLY a single, valid JSON object in one of these formats:
-      * \`{ "action": "identify_persona", "question": "I can definitely help! To get started, what's the primary purpose? For example, are you a 'Gamer', a 'Student', a 'Remote Worker', or maybe 'Setting up a smart home'?" }\`
+      * \`{ "action": "identify_persona", "question": "I can definitely help! To get started, what's the primary purpose? For example, are you a 'Gamer', a 'Student', a 'Remote Worker', or maybe 'Setting up a smart home'?\" }\`
       * \`{ "action": "suggest_categories", "persona": "EXTRACTED_PERSONA_HERE" }\`
       * \`{ "action": "clarify", "question": "YOUR_CLARIFYING_QUESTION_HERE" }\`
       * \`{ "action": "search", "query": "YOUR_CONCISE_SEARCH_QUERY_HERE" }\`
@@ -128,9 +127,7 @@ export function useShoppingAssistant() {
   };
 
   const searchWebForProducts = async (searchQuery: string) => {
-    // UPDATED PROMPT HERE
     const productGenPrompt = `
-      const productGenPrompt = `
       The user is looking for products based on the query: "${searchQuery}".
       Your task is to act as a query optimizer. Extract the most concise and effective product search term from this query, suitable for a direct e-commerce search API like Amazon or Walmart.
       Focus on the core product and key attributes. Do NOT include phrases like "best deal", "under $X", "for my desk", or conversational filler.
@@ -139,13 +136,11 @@ export function useShoppingAssistant() {
       Example 3: "cheap ergonomic office chair" -> "ergonomic office chair"
       Respond with ONLY the optimized search term as plain text.
     `;
-    // The `isJson: false` here means we expect plain text from Gemini, which will then be passed to Oxylabs
+    
     const optimizedQuery = await callGemini(productGenPrompt, false);
     console.log("Optimized query from Gemini for Oxylabs:", optimizedQuery);
 
-    // Now, call the Supabase function with the optimized query.
-    // The Supabase function (gemini-proxy) will handle the Oxylabs API call.
-    const result = await callGemini(optimizedQuery, true); // `isJson: true` because the Supabase function returns JSON
+    const result = await callGemini(optimizedQuery, true);
     return result;
   };
 
