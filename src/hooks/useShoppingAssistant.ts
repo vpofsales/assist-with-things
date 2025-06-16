@@ -54,13 +54,12 @@ export function useShoppingAssistant() {
   // This function now calls YOUR secure backend, not Google's.
   const callGemini = async (prompt: string, isJson = false): Promise<any> => {
     // !!! IMPORTANT: Replace this with your actual Supabase Edge Function URL !!!
-    const supabaseFunctionUrl = 'https://arecopcgvzzttgqqsvhp.supabase.co/functions/v1/gemini-proxy';
+    const supabaseFunctionUrl = 'YOUR_SUPABASE_FUNCTION_URL/gemini-proxy'; // Ensure this is correct!
 
     try {
       const response = await fetch(supabaseFunctionUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // We now send the prompt in the body to our backend function
         body: JSON.stringify({ promptText: prompt })
       });
 
@@ -129,24 +128,51 @@ export function useShoppingAssistant() {
   };
 
   const searchWebForProducts = async (searchQuery: string) => {
+    // UPDATED PROMPT HERE
     const productGenPrompt = `
       You are a product database API. Your ONLY job is to respond with a single, valid JSON object.
-      Based on the search query "${searchQuery}", generate a realistic list of 4 products and 2-3 relevant filterable attributes.
+      Based on the search query "${searchQuery}", generate a realistic list of 4 diverse and popular products.
+      For each product, include: name, brand, description, and price.
+      Crucially, generate a **plausible and realistic productUrl from a well-known e-commerce site** (e.g., amazon.com, bestbuy.com, walmart.com, target.com). The URL should look like an actual product page link.
+      Also, generate a **descriptive imageUrl using placehold.co**. For the image, use a relevant size (e.g., 400x400) and a color, with text that clearly indicates the product (e.g., "blue-lava-lamp" or "gaming-mouse"). Example: \`https://placehold.co/400x400/0000FF/FFFFFF?text=Blue+Lava+Lamp\`.
+      Include 2-3 relevant filterable attributes based on the product category.
+
       Your response MUST be a single, valid JSON object.
-      The object must have "products" and "filterableAttributes" keys.
-      - "products": An array of objects. Each MUST have: name, brand, description (strings), price (number), specs (array of {feature, explanation}), 
-        "imageUrl" (a \`placehold.co\` URL), and "productUrl" (a plausible but fake e-commerce URL like \`https://www.examplestore.com/products/...\`).
-      - "filterableAttributes": An array of objects with "name" and optional "unit" properties.
+      The object must have "products" (an array of product objects) and "filterableAttributes" (an array of attribute objects) keys.
+      Each product MUST have:
+      - \`name\`: string
+      - \`brand\`: string
+      - \`description\`: string
+      - \`price\`: number (realistic, e.g., 29.99, 129.00)
+      - \`specs\`: array of {feature: string; explanation: string}
+      - \`imageUrl\`: string (use placehold.co with descriptive text and color)
+      - \`productUrl\`: string (a plausible, real-world e-commerce URL)
+
+      Example JSON structure (do NOT include this in the actual prompt, it's just for your understanding):
+      \`\`\`json
+      {
+        "products": [
+          {
+            "name": "Classic 14.5-inch Lava Lamp",
+            "brand": "Lava Lite",
+            "description": "The original soothing motion lamp, perfect for relaxation and ambiance.",
+            "price": 29.99,
+            "specs": [
+              { "feature": "Height", "explanation": "14.5 inches" },
+              { "feature": "Bulb Type", "explanation": "25-watt incandescent" }
+            ],
+            "imageUrl": "https://placehold.co/400x400/FF00FF/FFFFFF?text=Classic+Lava+Lamp",
+            "productUrl": "https://www.amazon.com/Lava-Lite-Classic-Lamp-Purple/dp/B001EO2P1Y"
+          }
+        ],
+        "filterableAttributes": [
+          { "name": "Price", "unit": "$" },
+          { "name": "Height", "unit": "inches" }
+        ]
+      }
+      \`\`\`
     `;
     const result = await callGemini(productGenPrompt, true);
-    
-    // Handle case where filterableAttributes might be returned as strings instead of objects
-    if (result.filterableAttributes && Array.isArray(result.filterableAttributes)) {
-      result.filterableAttributes = result.filterableAttributes.map((attr: any) => 
-        typeof attr === 'string' ? { name: attr } : attr
-      );
-    }
-    
     return result;
   };
 
