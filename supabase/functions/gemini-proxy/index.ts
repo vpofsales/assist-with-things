@@ -75,6 +75,13 @@
                         body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: geminiTriagePrompt }] }] }),
                     }
                 );
+
+                if (!geminiResponse.ok) {
+                    const rawErrorText = await geminiResponse.text();
+                    console.error('Gemini API returned non-OK status:', geminiResponse.status, rawErrorText);
+                    throw new Error(`Gemini API error: ${rawErrorText}`); // Re-throw to catch it below
+                }
+             
                 const geminiData = await geminiResponse.json();
                 extractedSearchQuery = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || promptText;
             } catch (geminiError: any) {
