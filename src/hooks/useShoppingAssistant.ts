@@ -54,7 +54,7 @@ export function useShoppingAssistant() {
   // This function now calls YOUR secure backend, not Google's.
   const callGemini = async (prompt: string, isJson = false): Promise<any> => {
     // !!! IMPORTANT: Replace this with your actual Supabase Edge Function URL !!!
-    const supabaseFunctionUrl = 'YOUR_SUPABASE_FUNCTION_URL/gemini-proxy'; // Ensure this is correct!
+    const supabaseFunctionUrl = 'https://arecopcgvzzttgqqsvhp.supabase.co/functions/v1/gemini-proxy'; // Ensure this is correct!
 
     try {
       const response = await fetch(supabaseFunctionUrl, {
