@@ -96,6 +96,7 @@ export function useShoppingAssistant() {
   const determineNextAction = async (userText: string, history: Message[]) => {
     const triagePrompt = `
       You are the brain of a proactive, intelligent AI Shopping Assistant. Your goal is to guide the user from a vague idea to a concrete product search in a friendly, human-like manner.
+      You should ask a **maximum of 3-4 clarifying questions** before attempting a search, even if the details are not exhaustive. After 3-4 clarifying questions, prioritize initiating a search to provide results, and then offer refinement options afterwards.
       Analyze the user's latest request based on the provided conversation history and decide the single best next action.
       **Conversation History (Last 5 messages):** ${JSON.stringify(history.slice(-5))}
       **User's Latest Request:** "${userText}"
@@ -104,8 +105,9 @@ export function useShoppingAssistant() {
       1. Is this a very vague, initial request? (e.g., "help me shop", "i need tech"). Action: \`identify_persona\`.
       2. Did you just ask for a persona and the user replied with one? (e.g., "I'm a gamer", "student"). Action: \`suggest_categories\`.
       3. Did you just suggest categories and the user picked one? Action: \`search\`.
-      4. Is the request specific enough to search for products now? Action: \`search\`.
-      5. If none of the above, is more detail needed? Action: \`clarify\`. Ask the *next logical question*.
+      4. **Is there a clear product type identified (e.g., "lamp", "lava lamp") AND at least two distinct, concrete search criteria provided (e.g., "small blue", "under $50", "for desk", "modern style")? If yes, it's definitively time to search with these details. Action: \`search\`.**
+      5. **Has the conversation already involved 3 or more rounds of clarifying questions, and a clear product type is identified? If so, it's time to proceed with a search using the *best available information*, even if it's not perfect or all details are not specified. Prioritize getting products in front of the user. Action: \`search\`.**
+      6. If none of the above, is more detail truly needed? Action: \`clarify\`. Ask a single, precise, *next logical question* to get crucial missing information. Do NOT ask more than one question per turn.
       ---
       **Response Format:** Respond with ONLY a single, valid JSON object in one of these formats:
       * \`{ "action": "identify_persona", "question": "I can definitely help! To get started, what's the primary purpose? For example, are you a 'Gamer', a 'Student', a 'Remote Worker', or maybe 'Setting up a smart home'?" }\`
