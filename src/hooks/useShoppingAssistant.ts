@@ -1,5 +1,8 @@
+// src/hooks/useShoppingAssistant.ts
+
 import { useState, useCallback, useMemo } from 'react';
 
+// ... (keep the interface definitions for Message, Product, etc., as they are)
 interface Message {
   role: 'user' | 'model';
   parts: { text: string }[];
@@ -38,14 +41,6 @@ const INITIAL_MESSAGE: Message = {
   parts: [{ text: "Hello! I can find real products for you. To get started, you can tell me what you're looking for, or just say \"help me shop\" and I can guide you!" }]
 };
 
-const FUN_FACTS = [
-  "A group of flamingos is called a 'flamboyance'.",
-  "The national animal of Scotland is the unicorn.",
-  "Honey never spoils.",
-  "A single cloud can weigh more than 1 million pounds.",
-  "Octopuses have three hearts.",
-  "Bananas are berries, but strawberries aren't."
-];
 
 export function useShoppingAssistant() {
   const [conversationHistory, setConversationHistory] = useState<Message[]>([INITIAL_MESSAGE]);
@@ -56,65 +51,49 @@ export function useShoppingAssistant() {
   const [filterableAttributes, setFilterableAttributes] = useState<FilterableAttribute[]>([]);
   const [filters, setFilters] = useState<Filters>({ brand: 'all', sortBy: 'default', advanced: {} });
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, title: '', content: '', isLoading: false });
-  const [apiKey, setApiKey] = useState('');
 
+  // This function now calls YOUR secure backend, not Google's.
   const callGemini = async (prompt: string, isJson = false): Promise<any> => {
-    const payload: any = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-    if (isJson) {
-      payload.generationConfig = { responseMimeType: "application/json" };
-    }
-    
-    if (!apiKey) {
-      throw new Error("API key is required. Please enter your Gemini API key.");
-    }
-    
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    
+    // !!! IMPORTANT: Replace this with your actual Supabase Edge Function URL !!!
+    const supabaseFunctionUrl = 'https://arecopcgvzzttgqqsvhp.supabase.co/functions/v1/gemini-proxy';
+
     try {
-      const response = await fetch(apiUrl, {
+      const response = await fetch(supabaseFunctionUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        // We now send the prompt in the body to our backend function
+        body: JSON.stringify({ promptText: prompt })
       });
-      
+
       if (!response.ok) {
-        throw new Error("The AI model had an issue with that request. Please try again.");
+        const err = await response.json();
+        throw new Error(err.error || "The AI model had an issue with that request. Please try again.");
       }
-      
+
       const result = await response.json();
       if (!result.candidates?.[0]?.content?.parts?.[0]?.text) {
         throw new Error("Received an empty or invalid response from the AI model.");
       }
-      
+
       let rawText = result.candidates[0].content.parts[0].text;
-      
+
       if (isJson) {
-        // Clean up JSON response
         const jsonMatch = rawText.match(/```(?:json)?([\s\S]*?)```/);
         if (jsonMatch?.[1]) {
           rawText = jsonMatch[1].trim();
         }
-        
-        // Remove extra text and fix common issues
-        rawText = rawText.replace(/(:\s*".*?")\s+([a-zA-Z]+)\s*([,}])/g, '$1$3');
-        const firstBrace = rawText.indexOf('{');
-        const lastBrace = rawText.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace > firstBrace) {
-          rawText = rawText.substring(firstBrace, lastBrace + 1);
-        }
-        
         return JSON.parse(rawText);
       }
-      
+
       return rawText;
     } catch (error) {
-      console.error("Error in callGemini:", error);
-      throw error instanceof SyntaxError 
-        ? new Error("Failed to interpret the AI's response format. Please try again.")
-        : error;
+      console.error("Error calling Supabase function:", error);
+      throw error;
     }
   };
 
+  // No changes needed below this line, the logic remains the same.
+  // ... (keep the rest of the functions: determineNextAction, generateCategorySuggestions, etc.)
   const determineNextAction = async (userText: string, history: Message[]) => {
     const triagePrompt = `
       You are the brain of a proactive, intelligent AI Shopping Assistant. Your goal is to guide the user from a vague idea to a concrete product search in a friendly, human-like manner.
@@ -321,7 +300,6 @@ export function useShoppingAssistant() {
     generateComparison,
     updateFilters,
     updateComparisonList,
-    setModalState,
-    setApiKey
+    setModalState
   };
 }
