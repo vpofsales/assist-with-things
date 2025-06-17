@@ -54,40 +54,37 @@ export function useShoppingAssistant() {
   // This function now calls YOUR secure backend, not Google's.
   const callGemini = async (prompt: string, isJson = false): Promise<any> => {
     // !!! IMPORTANT: Replace this with your actual Supabase Edge Function URL !!!
-    const geminiApiKey = 'AIzaSyBZrIJcRYO7xBpCT7KnQjPCsF5qUE9vB4s'; // You'll need to set this properly
+    const supabaseFunctionUrl = 'https://arecopcgvzzttgqqsvhp.supabase.co/functions/v1/gemini-proxy';
     
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+        supabaseFunctionUrl,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+          body: JSON.stringify({ promptText: prompt })
         }
       );
 
       if (!response.ok) {
-        throw new Error("The AI model had an issue with that request. Please try again.");
+        const err = await response.json();
+        throw new Error(err.error || "The AI model had an issue with that request. Please try again.");
       }
 
       const result = await response.json();
-      if (!result.candidates?.[0]?.content?.parts?.[0]?.text) {
-        throw new Error("Received an empty or invalid response from the AI model.");
-      }
-
-      let rawText = result.candidates[0].content.parts[0].text;
-
+      
       if (isJson) {
-        const jsonMatch = rawText.match(/```(?:json)?([\s\S]*?)```/);
-        if (jsonMatch?.[1]) {
-          rawText = jsonMatch[1].trim();
-        }
-        return JSON.parse(rawText);
+        return result;
       }
 
-      return rawText;
+      // For non-JSON responses, expect text content
+      if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return result.candidates[0].content.parts[0].text;
+      }
+      
+      throw new Error("Received an empty or invalid response from the AI model.");
     } catch (error) {
-      console.error("Error calling Gemini API:", error);
+      console.error("Error calling Supabase function:", error);
       throw error;
     }
   };
@@ -110,7 +107,7 @@ export function useShoppingAssistant() {
       6. If none of the above, is more detail truly needed? Action: \`clarify\`. Ask a single, precise, *next logical question* to get crucial missing information. Do NOT ask more than one question per turn.
       ---
       **Response Format:** Respond with ONLY a single, valid JSON object in one of these formats:
-      * \`{ "action": "identify_persona", "question": "I can definitely help! To get started, what's the primary purpose? For example, are you a 'Gamer', a 'Student', a 'Remote Worker', or maybe 'Setting up a smart home'?\" }\`
+      * \`{ "action": "identify_persona", "question": "I can definitely help! To get started, what's the primary purpose? For example, are you a 'Gamer', a 'Student', a 'Remote Worker', or maybe 'Setting up a smart home'?" }\`
       * \`{ "action": "suggest_categories", "persona": "EXTRACTED_PERSONA_HERE" }\`
       * \`{ "action": "clarify", "question": "YOUR_CLARIFYING_QUESTION_HERE" }\`
       * \`{ "action": "search", "query": "YOUR_CONCISE_SEARCH_QUERY_HERE" }\`
