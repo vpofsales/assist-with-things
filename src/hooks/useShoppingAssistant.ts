@@ -54,18 +54,20 @@ export function useShoppingAssistant() {
   // This function now calls YOUR secure backend, not Google's.
   const callGemini = async (prompt: string, isJson = false): Promise<any> => {
     // !!! IMPORTANT: Replace this with your actual Supabase Edge Function URL !!!
-    const supabaseFunctionUrl = 'https://arecopcgvzzttgqqsvhp.supabase.co/functions/v1/gemini-proxy'; // Ensure this is correct!
-
+    const geminiApiKey = 'AIzaSyBZrIJcRYO7xBpCT7KnQjPCsF5qUE9vB4s'; // You'll need to set this properly
+    
     try {
-      const response = await fetch(supabaseFunctionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptText: prompt })
-      });
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+        }
+      );
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "The AI model had an issue with that request. Please try again.");
+        throw new Error("The AI model had an issue with that request. Please try again.");
       }
 
       const result = await response.json();
@@ -85,7 +87,7 @@ export function useShoppingAssistant() {
 
       return rawText;
     } catch (error) {
-      console.error("Error calling Supabase function:", error);
+      console.error("Error calling Gemini API:", error);
       throw error;
     }
   };
@@ -126,22 +128,28 @@ export function useShoppingAssistant() {
     return await callGemini(suggestionPrompt);
   };
 
+  // This function calls the Supabase Edge Function for product searches
   const searchWebForProducts = async (searchQuery: string) => {
-    const productGenPrompt = `
-      The user is looking for products based on the query: "${searchQuery}".
-      Your task is to act as a query optimizer. Extract the most concise and effective product search term from this query, suitable for a direct e-commerce search API like Amazon or Walmart.
-      Focus on the core product and key attributes. Do NOT include phrases like "best deal", "under $X", "for my desk", or conversational filler.
-      Example 1: "small blue lava lamp under $50 for my desk" -> "small blue lava lamp"
-      Example 2: "gaming headset with noise cancellation and rgb" -> "gaming headset noise cancellation rgb"
-      Example 3: "cheap ergonomic office chair" -> "ergonomic office chair"
-      Respond with ONLY the optimized search term as plain text.
-    `;
+    const supabaseFunctionUrl = 'https://arecopcgvzzttgqqsvhp.supabase.co/functions/v1/gemini-proxy';
     
-    const optimizedQuery = await callGemini(productGenPrompt, false);
-    console.log("Optimized query from Gemini for Oxylabs:", optimizedQuery);
+    try {
+      const response = await fetch(supabaseFunctionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptText: searchQuery })
+      });
 
-    const result = await callGemini(optimizedQuery, true);
-    return result;
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to search for products. Please try again.");
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Error calling Supabase function:", error);
+      throw error;
+    }
   };
 
   const searchWebForReviews = async (productName: string) => {
